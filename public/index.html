@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Product Catalogue Administration</title>
+<style>body{font-family:system-ui,sans-serif;max-width:980px;margin:36px auto;padding:20px;background:#f7f8fa;color:#162236}h1{font-size:28px}section{background:white;border:1px solid #dce1e8;border-radius:12px;padding:24px}label{display:block;margin-top:12px}input,select{display:block;width:100%;max-width:550px;padding:10px;margin-top:5px;border:1px solid #b5c0cc;border-radius:6px}button{padding:10px 14px;margin:12px 6px 0 0;border:0;border-radius:5px;background:#1559ae;color:white;cursor:pointer}#flash_message{margin:20px 0;color:#12633b}table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:8px;border-bottom:1px solid #ddd}#search_results{overflow:auto}</style></head>
+<body><h1>Product Catalogue Administration</h1><section>
+<label>Id<input id="id" type="number"></label>
+<label>Name<input id="name" type="text"></label>
+<label>Description<input id="description" type="text"></label>
+<label>Price<input id="price" type="number" step="0.01"></label>
+<label>Category<select id="category"><option value="">Any</option><option>Unknown</option><option>Cloths</option><option>Food</option><option>Housewares</option><option>Automotive</option><option>Tools</option><option>Electronics</option></select></label>
+<label>Available<select id="available"><option value="">Any</option><option value="true">True</option><option value="false">False</option></select></label>
+<div><button id="create" type="button">Create</button><button id="retrieve" type="button">Retrieve</button><button id="update" type="button">Update</button><button id="delete" type="button">Delete</button><button id="clear" type="button">Clear</button><button id="search" type="button">Search</button></div>
+<div id="flash_message" role="status"></div><div id="search_results"></div></section>
+<script>
+const $ = id => document.getElementById(id);
+const keys = ['id','name','description','price','category','available'];
+function readForm(){return {name:$('name').value,description:$('description').value,price:Number($('price').value),category:$('category').value||'Unknown',available:$('available').value!=='false'};}
+function fill(p){for(const k of keys){if(p[k]!==undefined && p[k]!==null) $(k).value=String(p[k]);}}
+function message(s){$('flash_message').textContent=s;}
+async function api(path,method='GET',body){const response=await fetch(path,{method,headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});if(!response.ok)throw Error((await response.json().catch(()=>({}))).error||`HTTP ${response.status}`);return response.status===204?null:response.json();}
+async function act(fn){try{await fn();}catch(e){message(e.message);}}
+$('clear').onclick=()=>{keys.forEach(k=>$(k).value='');message('');$('search_results').innerHTML='';};
+$('create').onclick=()=>act(async()=>{fill(await api('/api/products','POST',readForm()));message('Success');});
+$('retrieve').onclick=()=>act(async()=>{fill(await api('/api/products/'+$('id').value));message('Success');});
+$('update').onclick=()=>act(async()=>{fill(await api('/api/products/'+$('id').value,'PUT',readForm()));message('Success');});
+$('delete').onclick=()=>act(async()=>{await api('/api/products/'+$('id').value,'DELETE');message('Product has been Deleted!');});
+$('search').onclick=()=>act(async()=>{const p=new URLSearchParams();if($('name').value)p.set('name',$('name').value);else if($('category').value)p.set('category',$('category').value);else if($('available').value)p.set('available',$('available').value);const a=await api('/api/products'+(p.size?'?'+p:''));$('search_results').innerHTML='<table><thead><tr><th>Id</th><th>Name</th><th>Description</th><th>Price</th><th>Category</th><th>Available</th></tr></thead><tbody>'+a.map(x=>'<tr>'+keys.map(k=>'<td>'+String(x[k]??'').replaceAll('&','&amp;').replaceAll('<','&lt;')+'</td>').join('')+'</tr>').join('')+'</tbody></table>';message('Success');});
+</script></body></html>
